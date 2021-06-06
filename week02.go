@@ -14,7 +14,7 @@ func test() error {
 	// dosomething
 	e := ErrNoRow()
 	if e != nil {
-		return errors.Wrap(e, "not found")
+		return errors.WithMessage(e, "not found")
 	}
 	//another
 	return nil
