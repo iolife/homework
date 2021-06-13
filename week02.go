@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 )
 
@@ -20,10 +18,10 @@ func test() error {
 	return nil
 }
 
-func main() {
-	e := test()
-	if e != nil {
-		fmt.Printf("original error: %T %v\n", errors.Cause(e), errors.Cause(e))
-		fmt.Printf("stack trace:\n%+v\n", e)
-	}
-}
+// func main() {
+// 	e := test()
+// 	if e != nil {
+// 		fmt.Printf("original error: %T %v\n", errors.Cause(e), errors.Cause(e))
+// 		fmt.Printf("stack trace:\n%+v\n", e)
+// 	}
+// }
