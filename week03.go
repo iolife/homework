@@ -3,39 +3,64 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
-	"time"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"golang.org/x/sync/errgroup"
 )
 
 func serverApp(ctx context.Context, stop <-chan struct{}) error {
-	h := func(w http.ResponseWriter, req *http.Request) {
-		fmt.Fprintf(w, "Hello, world!\n")
-	}
 
-	s := http.Server{Addr: "0.0.0.0:8080", Handler: h}
+	mux := http.NewServeMux()
+	mux.Handle("/", http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprintf(w, "okay")
+		},
+	))
+
+	s := &http.Server{
+		Addr:    ":8080",
+		Handler: mux,
+	}
 	go func() {
 		<-stop
 		s.Shutdown(ctx)
 
 	}()
+
 	return s.ListenAndServe()
 }
 func main() {
-
-	g, _ := errgroup.WithContext(context.Background())
-	done, stop := make(chan error), make(chan struct{})
+	c, cancel := context.WithCancel(context.Background())
+	g, ctx := errgroup.WithContext(c)
+	_, stop := make(chan error), make(chan struct{})
 	g.Go(func() error {
-		return serverApp(stop)
+		signalChannel := make(chan os.Signal, 1)
+		signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
+		select {
+		case sig := <-signalChannel:
+			stop <- struct{}{}
+			fmt.Printf("signal : %s\n", sig)
+			cancel()
+		case <-ctx.Done():
+			stop <- struct{}{}
+			fmt.Println("close signal ")
+			return ctx.Err()
+		}
+		return nil
 	})
+
+	g.Go(func() error {
+		return serverApp(ctx, stop)
+	})
+
 	if err := g.Wait(); err == nil {
 		fmt.Println("Successfully fetched all URLs.")
+	} else {
+		log.Println(err)
 	}
-	go func() {
-		time.Sleep(time.Second * 5)
-		fmt.Println("Context canceled")
-
-	}()
 
 }
